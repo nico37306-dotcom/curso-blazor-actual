@@ -1,176 +1,163 @@
-
 @page "/Catalog"
+@using Microsoft.AspNetCore.Components.Forms
 @using sharpness_sharp.Components.UIComponents
- 
+@using sharpness_sharp.Data
+@using sharpness_sharp.Data.Models
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@rendermode InteractiveServer
+@inject ApplicationAuthDbContext _dbService
+
 <div class="grid grid-cols-4 gap-4 p-4 bg-gray-100 min-h-screen">
-    <button @onclick="MostrarMensaje" class="ui-btn ui-btn-primary">Pulsame Puta</button>
+    <button @onclick="MostrarMensaje" class="ui-btn ui-btn-primary">
+        Púlsame
+    </button>
+
     @foreach (var mensaje in lstMensajes)
     {
         <p class="ui-btn ui-btn-primary">@mensaje</p>
     }
-    @foreach (Cafe cafe in lstCafes)
-    {
-        <CoffeeCard Imagen="@cafe.Imagen" DescripcionCafe="@cafe.DescripcionCafe" NombreCafe="@cafe.NombreCafe" PrecioCafe="@cafe.PrecioCafe"></CoffeeCard>
-    }
-</div>
- 
- 
-@code {
 
-    List<string> lstMensajes = new();
-    void MostrarMensaje()
+    @foreach (Cafe cafe in lstCafes)
+{
+    <div class="border rounded p-4">
+        <CoffeeCard Imagen="@cafe.Imagen"
+                    DescripcionCafe="@cafe.DescripcionCafe"
+                    NombreCafe="@cafe.NombreCafe"
+                    PrecioCafe="@cafe.PrecioCafe" />
+
+        <button type="button"
+                class="ui-btn ui-btn-primary"
+                @onclick="() => SeleccionarCafe(cafe)">
+            Editar
+        </button>
+    </div>
+}
+</div>
+@if (editado != null)
+{
+    <h2>Editar café</h2>
+
+    <EditForm Model="@editado"
+              FormName="editar-cafe"
+              OnSubmit="ActualizarCafe">
+
+        <div class="mb-4">
+            <label>Nombre del café:</label>
+
+            <InputText @bind-Value="editado.NombreCafe"
+                       class="border-2 px-2" />
+        </div>
+
+        <div class="mb-4">
+            <label>Precio del café:</label>
+
+            <InputNumber @bind-Value="editado.PrecioCafe"
+                         class="border-2 px-2" />
+        </div>
+
+        <button type="submit" class="ui-btn ui-btn-primary">
+            Guardar cambios
+        </button>
+
+        <button type="button" @onclick="CancelarEdicion">
+            Cancelar
+        </button>
+    </EditForm>
+}
+
+@if (!string.IsNullOrEmpty(mensajeActualizacion))
+{
+    <p>@mensajeActualizacion</p>
+}
+
+<EditForm FormName="agregar-cafe"
+          Model="@newCafe"
+          OnSubmit="AgregarCafe">
+
+    <InputText @bind-Value="newCafe.NombreCafe"
+               class="border-2 px-2"
+               placeholder="Introduce el nombre del café" />
+
+    <InputNumber @bind-Value="newCafe.PrecioCafe"
+                 class="border-2 px-2"
+                 placeholder="Introduce el precio del café" />
+
+    <button type="submit">Guardar</button>
+</EditForm>
+
+@code {
+    private List<string> lstMensajes = new();
+    private List<Cafe> lstCafes = new();
+    private Cafe newCafe = new();
+
+    private void MostrarMensaje()
     {
         lstCafes.Add(new Cafe());
     }
-    private List<Cafe> lstCafes = new()
-{
-    new Cafe(
-        "https://cuplacoffee.com/wp-content/uploads/2025/03/what-is-an-americano-featured.jpg",
-        "Americano",
-        "Espresso diluido con agua caliente.",
-        20m),
 
-    new Cafe(
-        "https://www.allrecipes.com/thmb/n6Q4vMcFsTadyvJZxD54Vt-BLpA=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/96629-cafe-latte-ddmfs-hero-4x3-0288359d9c37485fa69afe5369dbcf2e.jpg",
-        "Latte",
-        "Espresso con leche vaporizada y una fina capa de espuma.",
-        25m),
-
-    new Cafe(
-        "https://perfectdailygrind.com/wp-content/uploads/2019/11/cappuccino-2.png",
-        "Cappuccino",
-        "Espresso con leche vaporizada y abundante espuma.",
-        25m),
-
-    new Cafe(
-        "https://cuplacoffee.com/wp-content/uploads/2025/03/what-is-an-americano-featured.jpg",
-        "Espresso",
-        "Café corto y concentrado, con aroma intenso.",
-        15m),
-
-    new Cafe(
-        "https://cuplacoffee.com/wp-content/uploads/2025/03/what-is-an-americano-featured.jpg",
-        "Doppio",
-        "Doble dosis de espresso para un sabor intenso.",
-        22m),
-
-    new Cafe(
-        "https://cuplacoffee.com/wp-content/uploads/2025/03/what-is-an-americano-featured.jpg",
-        "Ristretto",
-        "Espresso preparado con menos agua.",
-        18m),
-
-    new Cafe(
-        "https://cuplacoffee.com/wp-content/uploads/2025/03/what-is-an-americano-featured.jpg",
-        "Lungo",
-        "Espresso con una extracción más larga.",
-        18m),
-
-    new Cafe(
-        "https://perfectdailygrind.com/wp-content/uploads/2019/11/cappuccino-2.png",
-        "Espresso Macchiato",
-        "Espresso con un pequeño toque de espuma de leche.",
-        20m),
-
-    new Cafe(
-        "https://www.allrecipes.com/thmb/n6Q4vMcFsTadyvJZxD54Vt-BLpA=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/96629-cafe-latte-ddmfs-hero-4x3-0288359d9c37485fa69afe5369dbcf2e.jpg",
-        "Cortado",
-        "Espresso con una pequeña cantidad de leche caliente.",
-        20m),
-
-    new Cafe(
-        "https://www.allrecipes.com/thmb/n6Q4vMcFsTadyvJZxD54Vt-BLpA=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/96629-cafe-latte-ddmfs-hero-4x3-0288359d9c37485fa69afe5369dbcf2e.jpg",
-        "Flat White",
-        "Espresso doble con leche vaporizada de textura sedosa.",
-        27m),
-
-    new Cafe(
-        "https://perfectdailygrind.com/wp-content/uploads/2019/11/cappuccino-2.png",
-        "Mocaccino",
-        "Espresso con chocolate y leche vaporizada.",
-        28m),
-
-    new Cafe(
-        "https://www.allrecipes.com/thmb/z8r-_tGAUmOJYyWZPRerIWvrSlE=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/707064-Brown-Sugar-Caramel-Latte-139119-House-of-Aqua-ffcbf68c2b2e4d7483ada4a8c4f4cd36.jpg",
-        "Café Bombón",
-        "Espresso servido sobre leche condensada.",
-        24m),
-
-    new Cafe(
-        "https://www.allrecipes.com/thmb/qu7rkFAwsjtPnkYNd5Uwb-MR78w=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/6954373-2000-2b32bcc34db1457ea9dd54b7cfff9359.jpg",
-        "Affogato",
-        "Helado de vainilla bañado con espresso caliente.",
-        30m),
-
-    new Cafe(
-        "https://www.allrecipes.com/thmb/cV3UYYkDNFlotFatGJWqrJZ_bP0=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/3809505_20Cold-Brewed20Coffee20Photo20by20Buckwheat20Queen20650x465-3b868d11a8fd45aaac98cde0b75fd51e.jpg",
-        "Cold Brew",
-        "Café extraído lentamente en agua fría.",
-        26m),
-
-    new Cafe(
-        "https://www.allrecipes.com/thmb/_G0QokAQq_nQtYvWaM2rbZcAtSI=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/21667-easy-iced-coffee-ddmfs-4x3-0093-7becf3932bd64ed7b594d46c02d0889f.jpg",
-        "Iced Latte",
-        "Espresso con leche fría y cubos de hielo.",
-        27m),
-
-    new Cafe(
-        "https://www.allrecipes.com/thmb/W2NqWevpFxI5F6iWNcXkppYQ_8g=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/2264737-Campfire-SMores-Frappuccino-237880-Anna-Berman-650x465-0e3b091f73f44167a065a0415049c644.jpg",
-        "Frappé de Café",
-        "Café licuado con leche y hielo.",
-        30m),
-
-    new Cafe(
-        "https://www.allrecipes.com/thmb/n6Q4vMcFsTadyvJZxD54Vt-BLpA=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/96629-cafe-latte-ddmfs-hero-4x3-0288359d9c37485fa69afe5369dbcf2e.jpg",
-        "Latte de Vainilla",
-        "Espresso con leche vaporizada y vainilla.",
-        28m),
-
-    new Cafe(
-        "https://www.allrecipes.com/thmb/z8r-_tGAUmOJYyWZPRerIWvrSlE=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/707064-Brown-Sugar-Caramel-Latte-139119-House-of-Aqua-ffcbf68c2b2e4d7483ada4a8c4f4cd36.jpg",
-        "Latte de Caramelo",
-        "Espresso con leche y jarabe de caramelo.",
-        28m),
-
-    new Cafe(
-        "https://www.allrecipes.com/thmb/yI7f31EXCWeXiDum7LvlaSGYOok=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/2107268-bdfd41684a57490382aad4ecdc8dcd58.jpg",
-        "Moca Blanco",
-        "Espresso con chocolate blanco y leche vaporizada.",
-        30m),
-
-    new Cafe(
-        "https://www.allrecipes.com/thmb/cV3UYYkDNFlotFatGJWqrJZ_bP0=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/3809505_20Cold-Brewed20Coffee20Photo20by20Buckwheat20Queen20650x465-3b868d11a8fd45aaac98cde0b75fd51e.jpg",
-        "Espresso Tonic",
-        "Espresso servido con agua tónica y hielo.",
-        28m)
-};
-
-    public class Cafe
+    protected override Task OnInitializedAsync()
     {
-        public string? Imagen { get; set; }
-        public string? NombreCafe { get; set; }
-        public string? DescripcionCafe { get; set; }
-        public decimal PrecioCafe { get; set; }
+        lstCafes = _dbService.Cafes.ToList();
 
-        public Cafe(
-            string imagen,
-            string nombreCafe,
-            string descripcionCafe,
-            decimal precioCafe)
-        {
-            Imagen = imagen;
-            NombreCafe = nombreCafe;
-            DescripcionCafe = descripcionCafe;
-            PrecioCafe = precioCafe;
-        }
-
-
-        public Cafe()
-        {
-            Imagen = "Potaxio";
-            NombreCafe = "Ete bread";
-            DescripcionCafe = "El pepe";
-            PrecioCafe = 67;
-        }
+        return Task.CompletedTask;
     }
+
+    private Task AgregarCafe()
+    {
+        _dbService.Cafes.Add(newCafe);
+        _dbService.SaveChanges();
+
+        lstCafes.Add(newCafe);
+        newCafe = new();
+
+        return Task.CompletedTask;
+    }
+    private Cafe? editado;
+private string mensajeActualizacion = "";
+
+private void SeleccionarCafe(Cafe cafe)
+{
+    // copiamos los datos al formulario
+    editado = new Cafe
+    {
+        Id = cafe.Id,
+        NombreCafe = cafe.NombreCafe,
+        PrecioCafe = cafe.PrecioCafe
+    };
+
+    mensajeActualizacion = "";
+}
+
+private void ActualizarCafe()
+{
+    if (editado == null)
+    {
+        return;
+    }
+
+    // buscamos el objeto original que EF está siguiendo
+    Cafe? cafe = lstCafes.FirstOrDefault(c => c.Id == editado.Id);
+
+    if (cafe == null)
+    {
+        mensajeActualizacion = "No se encontró el café.";
+        return;
+    }
+
+    // asignamos los nuevos valores al objeto original
+    cafe.NombreCafe = editado.NombreCafe;
+    cafe.PrecioCafe = editado.PrecioCafe;
+
+    // guardamos los cambios en la base de datos
+    _dbService.SaveChanges();
+
+    editado = null;
+    mensajeActualizacion = "Café actualizado correctamente.";
+}
+
+private void CancelarEdicion()
+{
+    editado = null;
+    mensajeActualizacion = "";
+}
 }

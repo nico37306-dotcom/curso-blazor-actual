@@ -1,0 +1,32 @@
+@page "/Usuarios"
+@using sharpness_sharp.Data
+@using sharpness_sharp.Data.Models
+@inject ApplicationAuthDbContext _dbService
+
+<h1>Lista de usuarios</h1>
+
+@if (lstUsuarios.Count == 0)
+{
+    <p>No hay usuarios registrados.</p>
+}
+else
+{
+    @foreach (ApplicationUser user in lstUsuarios)
+    {
+        <div class="border rounded p-4 mb-4">
+            <h2>Username: @user.UserName</h2>
+            <p>Email: @user.Email</p>
+        </div>
+    }
+}
+
+@code {
+    private List<ApplicationUser> lstUsuarios = new();
+
+    protected override Task OnInitializedAsync()
+    {
+        lstUsuarios = _dbService.Users.ToList();
+
+        return Task.CompletedTask;
+    }
+}

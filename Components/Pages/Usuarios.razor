@@ -1,32 +1,73 @@
-@page "/Usuarios"
+@page "/usuarios"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
 @using sharpness_sharp.Data
-@using sharpness_sharp.Data.Models
 @inject ApplicationAuthDbContext _dbService
-
-<h1>Lista de usuarios</h1>
-
-@if (lstUsuarios.Count == 0)
-{
-    <p>No hay usuarios registrados.</p>
-}
-else
-{
+@inject UserManager<ApplicationUser> _userService
+@inject RoleManager<IdentityRole> _roleService
+ 
+@attribute [Authorize(Roles = "Admin")]
+ 
+<EditForm FormName="agregar-usuario" OnSubmit="RegistrarUsuario" Model="nuevoUsuario">
+    <InputText class="border-2 mx-2 px-2" placeholder="Introduce tu correo" @bind-Value="nuevoUsuario.Email" required/>
+    <InputText class="border-2 mx-2 px-2" placeholder="Introduce tu contrasena" @bind-Value="nuevoUsuario.PasswordHash" required/>
+    <button class="ui-btn ui-btn-primary" type="submit">Guardar Usuario</button>
+</EditForm>
+ 
+<div class="flex flex-col gap-2 mt-2">
     @foreach (ApplicationUser user in lstUsuarios)
     {
-        <div class="border rounded p-4 mb-4">
+        <div class="border p-3">
             <h2>Username: @user.UserName</h2>
             <p>Email: @user.Email</p>
+            <p>Email Confirmado: @user.EmailConfirmed</p>
+            <p>Contraseña: @user.PasswordHash</p>
+            <b>Roles:</b>
+            @foreach (var role in _userService.GetRolesAsync(user).GetAwaiter().GetResult())
+            {
+                <p>@role</p>
+            }
         </div>
     }
-}
-
+</div>
+ 
 @code {
-    private List<ApplicationUser> lstUsuarios = new();
-
+    private ApplicationUser nuevoUsuario = new();
+    public List<ApplicationUser> lstUsuarios = new();
+ 
     protected override Task OnInitializedAsync()
     {
         lstUsuarios = _dbService.Users.ToList();
-
-        return Task.CompletedTask;
+        return base.OnInitializedAsync();
+    }
+ 
+    private async Task RegistrarUsuario()
+    {
+        await _userService.CreateAsync(new ApplicationUser()
+        {
+            Email = nuevoUsuario.Email,
+            UserName = nuevoUsuario.Email,
+            EmailConfirmed = true
+        }, nuevoUsuario.PasswordHash);
+        // 8 caracteres, 1 Mayuscula, 1 minuscula, 1 simbolo especial
+ 
+        // Admin
+ 
+        if(await _roleService.FindByNameAsync("Cliente") is null)
+        {
+            var resultado = await _roleService.CreateAsync(new("Cliente"));
+ 
+            if (resultado.Succeeded)
+            {
+            }
+            else
+            {
+                return;
+            }
+        }
+        await _userService.AddToRoleAsync(
+            await _userService.FindByEmailAsync(nuevoUsuario.Email),
+            "Cliente"
+        );
     }
 }

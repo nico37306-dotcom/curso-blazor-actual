@@ -1,4 +1,5 @@
-@page "/Catalog"
+﻿@page "/Catalog"
+@using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
 @using sharpness_sharp.Components.UIComponents
 @using sharpness_sharp.Data
@@ -6,158 +7,181 @@
 @using static Microsoft.AspNetCore.Components.Web.RenderMode
 @rendermode InteractiveServer
 @inject ApplicationAuthDbContext _dbService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<div class="grid grid-cols-4 gap-4 p-4 bg-gray-100 min-h-screen">
-    <button @onclick="MostrarMensaje" class="ui-btn ui-btn-primary">
-        Púlsame
-    </button>
+<PageTitle>Catálogo de productos</PageTitle>
 
-    @foreach (var mensaje in lstMensajes)
+<div class="mx-auto flex max-w-7xl flex-col gap-6 pb-8">
+    <header>
+        <h1 class="text-3xl font-bold text-stone-900">Catálogo de productos</h1>
+        <p class="mt-2 text-stone-600">Agrega los datos de un café y consulta los productos del catálogo.</p>
+    </header>
+
+    <section class="ui-panel" aria-labelledby="agregar-producto">
+        <h2 id="agregar-producto" class="ui-section-title">Agregar producto</h2>
+        <p class="mt-1 mb-5 text-sm text-stone-600">Completa el nombre, el precio y la descripción. La imagen es opcional.</p>
+        <EditForm @key="newCafe" FormName="agregar-cafe" Model="@newCafe" OnValidSubmit="AgregarCafe">
+            <DataAnnotationsValidator />
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div class="ui-field">
+                    <label for="nombre-cafe" class="ui-label">Nombre del producto</label>
+                    <InputText id="nombre-cafe" @bind-Value="newCafe.NombreCafe" class="ui-input" placeholder="Ej. Café de especialidad" />
+                    <ValidationMessage For="@(() => newCafe.NombreCafe)" />
+                </div>
+                <div class="ui-field">
+                    <label for="precio-cafe" class="ui-label">Precio</label>
+                    <InputNumber id="precio-cafe" @bind-Value="newCafe.PrecioCafe" class="ui-input" min="0.01" step="0.01"
+                                 placeholder="Ej. 25,50" ParsingErrorMessage="Introduce un precio válido." />
+                    <ValidationMessage For="@(() => newCafe.PrecioCafe)" />
+                </div>
+                <div class="ui-field md:col-span-2">
+                    <label for="descripcion-cafe" class="ui-label">Descripción</label>
+                    <InputTextArea id="descripcion-cafe" @bind-Value="newCafe.DescripcionCafe" class="ui-input" rows="3"
+                                   placeholder="Describe el sabor, el origen o la presentación del producto." />
+                    <ValidationMessage For="@(() => newCafe.DescripcionCafe)" />
+                </div>
+                <div class="ui-field md:col-span-2">
+                    <label for="imagen-cafe" class="ui-label">Enlace de la imagen (opcional)</label>
+                    <InputText id="imagen-cafe" @bind-Value="newCafe.Imagen" class="ui-input"
+                               placeholder="https://ejemplo.com/cafe.jpg" aria-describedby="ayuda-imagen" />
+                    <p id="ayuda-imagen" class="text-sm text-stone-500">Pega la dirección de una imagen del producto.</p>
+                    <ValidationMessage For="@(() => newCafe.Imagen)" />
+                </div>
+            </div>
+            <div class="mt-5 flex justify-end">
+                <button type="submit" class="ui-btn ui-btn-primary">Guardar producto</button>
+            </div>
+        </EditForm>
+    </section>
+
+    @if (!string.IsNullOrEmpty(mensajeActualizacion))
     {
-        <p class="ui-btn ui-btn-primary">@mensaje</p>
+        <p class="ui-alert ui-alert-info" role="status">@mensajeActualizacion</p>
     }
 
-    @foreach (Cafe cafe in lstCafes)
-{
-    <div class="border rounded p-4">
-        <CoffeeCard Imagen="@cafe.Imagen"
-                    DescripcionCafe="@cafe.DescripcionCafe"
-                    NombreCafe="@cafe.NombreCafe"
-                    PrecioCafe="@cafe.PrecioCafe" />
-
-        <button type="button"
-                class="ui-btn ui-btn-primary"
-                @onclick="() => SeleccionarCafe(cafe)">
-            Editar
-        </button>
-    </div>
-}
+    <section aria-labelledby="productos-catalogo">
+        <div class="mb-4 flex items-center justify-between gap-3">
+            <h2 id="productos-catalogo" class="ui-section-title">Productos del catálogo</h2>
+            <span class="text-sm text-stone-500">@lstCafes.Count productos</span>
+        </div>
+        @if (lstCafes.Count == 0)
+        {
+            <p class="ui-panel text-stone-600">Todavía no hay productos. Agrega el primero con el formulario de arriba.</p>
+        }
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            @foreach (Cafe cafe in lstCafes)
+            {
+                <CoffeeCard @key="cafe"
+                            Id="@cafe.Id"
+                            Imagen="@cafe.Imagen"
+                            DescripcionCafe="@cafe.DescripcionCafe"
+                            NombreCafe="@cafe.NombreCafe"
+                            PrecioCafe="@cafe.PrecioCafe"
+                            EnviarNotificacionActualizacion="ActualizarCafe"
+                            EnviarNotificacionEliminacion="EliminarCafe" />
+            }
+        </div>
+    </section>
 </div>
-@if (editado != null)
-{
-    <h2>Editar café</h2>
-
-    <EditForm Model="@editado"
-              FormName="editar-cafe"
-              OnSubmit="ActualizarCafe">
-
-        <div class="mb-4">
-            <label>Nombre del café:</label>
-
-            <InputText @bind-Value="editado.NombreCafe"
-                       class="border-2 px-2" />
-        </div>
-
-        <div class="mb-4">
-            <label>Precio del café:</label>
-
-            <InputNumber @bind-Value="editado.PrecioCafe"
-                         class="border-2 px-2" />
-        </div>
-
-        <button type="submit" class="ui-btn ui-btn-primary">
-            Guardar cambios
-        </button>
-
-        <button type="button" @onclick="CancelarEdicion">
-            Cancelar
-        </button>
-    </EditForm>
-}
-
-@if (!string.IsNullOrEmpty(mensajeActualizacion))
-{
-    <p>@mensajeActualizacion</p>
-}
-
-<EditForm FormName="agregar-cafe"
-          Model="@newCafe"
-          OnSubmit="AgregarCafe">
-
-    <InputText @bind-Value="newCafe.NombreCafe"
-               class="border-2 px-2"
-               placeholder="Introduce el nombre del café" />
-
-    <InputNumber @bind-Value="newCafe.PrecioCafe"
-                 class="border-2 px-2"
-                 placeholder="Introduce el precio del café" />
-
-    <button type="submit">Guardar</button>
-</EditForm>
 
 @code {
-    private List<string> lstMensajes = new();
-    private List<Cafe> lstCafes = new();
-    private Cafe newCafe = new();
 
-    private void MostrarMensaje()
+    private List<Cafe> lstCafes = new();
+    private NuevoCafe newCafe = new();
+
+    private sealed class NuevoCafe
     {
-        lstCafes.Add(new Cafe());
+        [Required(ErrorMessage = "Introduce el nombre del producto.")]
+        public string? NombreCafe { get; set; }
+
+        [Required(ErrorMessage = "Introduce una descripción del producto.")]
+        public string? DescripcionCafe { get; set; }
+
+        [Required(ErrorMessage = "Introduce el precio del producto.")]
+        [Range(typeof(decimal), "0.01", "79228162514264337593543950335", ErrorMessage = "El precio debe ser mayor que cero.", ParseLimitsInInvariantCulture = true)]
+        public decimal? PrecioCafe { get; set; }
+
+        [Url(ErrorMessage = "Introduce un enlace válido para la imagen (https://...).")]
+        public string? Imagen { get; set; }
     }
 
     protected override Task OnInitializedAsync()
     {
-        lstCafes = _dbService.Cafes.ToList();
+        lstCafes = _dbService.Cafes.ToList()
+            .Where(cafe => !string.IsNullOrWhiteSpace(cafe.NombreCafe)
+                || !string.IsNullOrWhiteSpace(cafe.DescripcionCafe)
+                || !string.IsNullOrWhiteSpace(cafe.Imagen)
+                || cafe.PrecioCafe != 0)
+            .ToList();
 
         return Task.CompletedTask;
     }
 
     private Task AgregarCafe()
     {
-        _dbService.Cafes.Add(newCafe);
+        var cafe = new Cafe
+        {
+            NombreCafe = newCafe.NombreCafe!.Trim(),
+            DescripcionCafe = newCafe.DescripcionCafe!.Trim(),
+            PrecioCafe = newCafe.PrecioCafe!.Value,
+            Imagen = string.IsNullOrWhiteSpace(newCafe.Imagen) ? null : newCafe.Imagen.Trim()
+        };
+        _dbService.Cafes.Add(cafe);
         _dbService.SaveChanges();
 
-        lstCafes.Add(newCafe);
+        lstCafes.Add(cafe);
         newCafe = new();
+        mensajeActualizacion = "Producto agregado correctamente.";
 
         return Task.CompletedTask;
     }
-    private Cafe? editado;
-private string mensajeActualizacion = "";
+    private string mensajeActualizacion = "";
 
-private void SeleccionarCafe(Cafe cafe)
-{
-    // copiamos los datos al formulario
-    editado = new Cafe
+    private async Task<bool> PuedeModificar()
     {
-        Id = cafe.Id,
-        NombreCafe = cafe.NombreCafe,
-        PrecioCafe = cafe.PrecioCafe
-    };
+        var estado = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (estado.User.Identity?.IsAuthenticated == true && estado.User.IsInRole("Admin"))
+        {
+            return true;
+        }
 
-    mensajeActualizacion = "";
-}
-
-private void ActualizarCafe()
-{
-    if (editado == null)
-    {
-        return;
+        mensajeActualizacion = "No tienes permisos para modificar.";
+        return false;
     }
 
-    // buscamos el objeto original que EF está siguiendo
-    Cafe? cafe = lstCafes.FirstOrDefault(c => c.Id == editado.Id);
-
-    if (cafe == null)
+    private async Task ActualizarCafe(Cafe actualizado)
     {
-        mensajeActualizacion = "No se encontró el café.";
-        return;
+        if (!await PuedeModificar()) return;
+
+        Cafe? cafe = lstCafes.FirstOrDefault(c => c.Id == actualizado.Id);
+        if (cafe == null)
+        {
+            mensajeActualizacion = "No se encontró el café.";
+            return;
+        }
+
+        cafe.Imagen = actualizado.Imagen;
+        cafe.NombreCafe = actualizado.NombreCafe;
+        cafe.DescripcionCafe = actualizado.DescripcionCafe;
+        cafe.PrecioCafe = actualizado.PrecioCafe;
+        _dbService.SaveChanges();
+        mensajeActualizacion = "Café actualizado correctamente.";
     }
 
-    // asignamos los nuevos valores al objeto original
-    cafe.NombreCafe = editado.NombreCafe;
-    cafe.PrecioCafe = editado.PrecioCafe;
+    private async Task EliminarCafe(int id)
+    {
+        if (!await PuedeModificar()) return;
 
-    // guardamos los cambios en la base de datos
-    _dbService.SaveChanges();
+        Cafe? cafe = lstCafes.FirstOrDefault(c => c.Id == id);
+        if (cafe == null)
+        {
+            mensajeActualizacion = "No se encontró el café.";
+            return;
+        }
 
-    editado = null;
-    mensajeActualizacion = "Café actualizado correctamente.";
-}
-
-private void CancelarEdicion()
-{
-    editado = null;
-    mensajeActualizacion = "";
-}
+        _dbService.Cafes.Remove(cafe);
+        _dbService.SaveChanges();
+        lstCafes.Remove(cafe);
+        mensajeActualizacion = "Café eliminado correctamente.";
+    }
 }

@@ -1,18 +1,91 @@
-
-        <div class="flex flex-col justify-center border-2 w-10vw rounded-md p-4 m-2 gap-2">
-            <img src="@Imagen" class="w-full h-1/2 object-cover rounded-md" />
-            <h2 class="text-bold text-2xl">@NombreCafe</h2>
-            <p><b>Descripción: </b>@DescripcionCafe</p>
-            <p class="font-bold text-fuchsia-600 bg-green-600 rounded-xl p-3">@PrecioCafe Bs.</p>
-        </div>
-
-        @code{
-            [Parameter]
-            public string? Imagen {get;set;}
-            [Parameter]
-            public string? NombreCafe {get;set;}
-            [Parameter]
-            public string? DescripcionCafe {get;set;}
-            [Parameter]
-            public decimal PrecioCafe {get;set;}
-        }
+﻿@using sharpness_sharp.Data.Models
+ 
+<div class="flex min-w-0 flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm">
+    @if (!string.IsNullOrWhiteSpace(Imagen))
+    {
+        <img src="@Imagen" alt="@NombreCafe" class="h-48 w-full rounded-xl object-cover" />
+    }
+    @if (ModoEdicion)
+    {
+        <label class="ui-field">
+            <span class="ui-label">Imagen</span>
+            <input type="url" class="ui-input" @bind="Imagen" />
+        </label>
+        <label class="ui-field">
+            <span class="ui-label">Nombre</span>
+            <input type="text" class="ui-input" @bind="NombreCafe" />
+        </label>
+        <label class="ui-field">
+            <span class="ui-label">Descripción</span>
+            <textarea class="ui-input" rows="3" @bind="DescripcionCafe"></textarea>
+        </label>
+        <label class="ui-field">
+            <span class="ui-label">Precio</span>
+            <span class="flex items-center gap-2">
+                <input class="ui-input" type="number" step="0.01" min="0.01" @bind="PrecioCafe" />
+                <span>Bs.</span>
+            </span>
+        </label>
+    }
+    else
+    {
+        <h3 class="text-xl font-semibold text-stone-900">@NombreCafe</h3>
+        <p class="text-sm text-stone-600 break-words">@DescripcionCafe</p>
+        <p class="mt-auto text-xl font-bold text-emerald-700">@PrecioCafe.ToString("0.00") Bs.</p>
+    }
+ 
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+    @if (ModoEdicion)
+    {
+        <button class="ui-btn ui-btn-primary" @onclick="ActualizarProducto">Guardar</button>
+    }
+    else
+    {
+        <button class="ui-btn ui-btn-soft" @onclick="CambiarModoEdicion">Editar</button>
+    }
+            <button @onclick="EliminarProducto" class="ui-btn ui-btn-danger">Eliminar</button>
+        </Authorized>
+        <NotAuthorized>
+            <p>No tienes permisos para modificar.</p>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+ 
+@code {
+        private Task EliminarProducto()
+    {
+        return EnviarNotificacionEliminacion.InvokeAsync(Id);
+    }
+ 
+        private bool ModoEdicion = false;
+ 
+    [Parameter] public int Id {get;set;}
+    [Parameter] public string? Imagen { get; set; }
+    [Parameter] public string? NombreCafe { get; set; }
+    [Parameter] public string? DescripcionCafe { get; set; }
+    [Parameter] public decimal PrecioCafe { get; set; }
+ 
+    [Parameter] public EventCallback<Cafe> EnviarNotificacionActualizacion {get;set;}
+    [Parameter] public EventCallback<int> EnviarNotificacionEliminacion {get;set;}
+ 
+    private void CambiarModoEdicion()
+    {
+        ModoEdicion = !ModoEdicion;
+        StateHasChanged();
+    }
+    private async Task ActualizarProducto()
+    {
+        await EnviarNotificacionActualizacion.InvokeAsync(new()
+        {
+            Id=Id,
+            Imagen = Imagen,
+            NombreCafe = NombreCafe,
+            DescripcionCafe = DescripcionCafe,
+            PrecioCafe = PrecioCafe,
+        });
+        ModoEdicion = false;
+    }
+ 
+ 
+}
